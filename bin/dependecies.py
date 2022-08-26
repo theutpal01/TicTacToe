@@ -1,7 +1,36 @@
 
-import pygame
+import pygame, copy, numpy as np
 from bin.constants import *
 
+
+class Label:
+    def __init__(self, text, rect, color=FG_COLOR):
+        self.text = text
+        self.baseFont = pygame.font.SysFont("Cambria", 32)
+        self.rect = pygame.Rect(rect[0], rect[1], rect[2], rect[3])
+        self.color = color
+
+    def display(self, screen):
+        text = self.baseFont.render(self.text, True, self.color)
+        pygame.draw.rect(screen, BG_COLOR, self.rect)
+        screen.blit(text, (self.rect.x + 5, self.rect.y + 5))
+
+    def changeColor(self, screen, color):
+        self.color = color
+        text = self.baseFont.render(self.text, True, self.color)
+        screen.blit(text, (self.rect.x + 5, self.rect.y + 5))
+
+class TextBox:
+    def __init__(self, rect, text=""):
+        self.baseFont = pygame.font.SysFont("Cambria", 32)
+        self.inputRect = pygame.Rect(rect[0], rect[1], rect[2], rect[3])
+        self.userText = text
+        self.active = False
+
+    
+    def displayText(self, screen):
+        text = self.baseFont.render(self.userText, True, FG_COLOR)
+        screen.blit(text, (self.inputRect.x + 5, self.inputRect.y + 5))
 
 
 class MenuScreen:
@@ -51,34 +80,6 @@ class ModeScreen:
         screen.blit(self.exitImg, self.exitRect)
 
 
-class Label:
-    def __init__(self, text, rect, color=FG_COLOR):
-        self.text = text
-        self.baseFont = pygame.font.SysFont("Cambria", 32)
-        self.rect = pygame.Rect(rect[0], rect[1], rect[2], rect[3])
-        self.color = color
-
-    def display(self, screen):
-        pygame.draw.rect(screen, BG_COLOR, self.rect)
-        text = self.baseFont.render(self.text, True, self.color)
-        screen.blit(text, (self.rect.x + 5, self.rect.y + 5))
-
-    def changeColor(self, color):
-        self.color = color
-
-class TextBox:
-    def __init__(self, rect, text=""):
-        self.baseFont = pygame.font.SysFont("Cambria", 32)
-        self.inputRect = pygame.Rect(rect[0], rect[1], rect[2], rect[3])
-        self.userText = text
-        self.active = False
-
-    
-    def displayText(self, screen):
-        text = self.baseFont.render(self.userText, True, FG_COLOR)
-        screen.blit(text, (self.inputRect.x + 5, self.inputRect.y + 5))
-
-
 class NameScreen:
     def __init__(self, pLbl, oLbl):
 
@@ -114,7 +115,6 @@ class NameScreen:
         screen.blit(self.exitImg, self.exitRect)
         screen.blit(self.submitImg, self.submitRect)
         
-        
 
 class GameArea:
     def __init__(self):
@@ -127,3 +127,142 @@ class GameArea:
     def drawAll(self, screen):
         self.pName.display(screen)
         self.oName.display(screen)
+
+
+class Board:
+    def __init__(self):
+        self.squares = np.zeros( (ROWS, COLS) )
+        self.empty_sqrs = self.squares # [squares]
+        self.marked_sqrs = 0
+
+    def final_state(self, screen, show=False):
+        '''
+            @return 0 if there is no win yet
+            @return 1 if player 1 wins
+            @return 2 if player 2 wins
+        '''
+
+        # vertical wins
+        for col in range(COLS):
+            if self.squares[0][col] == self.squares[1][col] == self.squares[2][col] != 0:
+                if show:
+                    color = CIRC_COLOR if self.squares[0][col] == 2 else CROSS_COLOR
+                    iPos = (PADX + (col * SQSIZE + SQSIZE // 2), 20)
+                    fPos = (PADX + (col * SQSIZE + SQSIZE // 2), HEIGHT - 20)
+                    pygame.draw.line(screen, color, iPos, fPos, LINE_WIDTH)
+                return self.squares[0][col]
+
+        # horizontal wins
+        for row in range(ROWS):
+            if self.squares[row][0] == self.squares[row][1] == self.squares[row][2] != 0:
+                if show:
+                    color = CIRC_COLOR if self.squares[row][0] == 2 else CROSS_COLOR
+                    iPos = (PADX + 20, row * SQSIZE + SQSIZE // 2)
+                    fPos = (WIDTH - 20, row * SQSIZE + SQSIZE // 2)
+                    pygame.draw.line(screen, color, iPos, fPos, LINE_WIDTH)
+                return self.squares[row][0]
+
+        # desc diagonal
+        if self.squares[0][0] == self.squares[1][1] == self.squares[2][2] != 0:
+            if show:
+                color = CIRC_COLOR if self.squares[1][1] == 2 else CROSS_COLOR
+                iPos = (PADX + 20, 20)
+                fPos = (WIDTH - 20, HEIGHT - 20)
+                pygame.draw.line(screen, color, iPos, fPos, CROSS_WIDTH)
+            return self.squares[1][1]
+
+        # asc diagonal
+        if self.squares[2][0] == self.squares[1][1] == self.squares[0][2] != 0:
+            if show:
+                color = CIRC_COLOR if self.squares[1][1] == 2 else CROSS_COLOR
+                iPos = (PADX + 20, HEIGHT - 20)
+                fPos = (WIDTH - 20, 20)
+                pygame.draw.line(screen, color, iPos, fPos, CROSS_WIDTH)
+            return self.squares[1][1]
+
+        # no win yet
+        return 0
+
+    def mark_sqr(self, row, col, player):
+        self.squares[row][col] = player
+        self.marked_sqrs += 1
+
+    def empty_sqr(self, row, col):
+        return self.squares[row][col] == 0
+
+    def get_empty_sqrs(self):
+        empty_sqrs = []
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.empty_sqr(row, col):
+                    empty_sqrs.append( (row, col) )
+        
+        return empty_sqrs
+
+    def isfull(self):
+        return self.marked_sqrs == 9
+
+    def isempty(self):
+        return self.marked_sqrs == 0
+
+class AI:
+    def __init__(self, player=2):
+        self.player = player
+
+
+    # --- MINIMAX ---
+    def minimax(self, board, screen, maximizing):
+        
+        # terminal case
+        case = board.final_state(screen)
+
+        # player 1 wins
+        if case == 1:
+            return 1, None # eval, move
+
+        # player 2 wins
+        if case == 2:
+            return -1, None
+
+        # draw
+        elif board.isfull():
+            return 0, None
+
+        if maximizing:
+            max_eval = -100
+            best_move = None
+            empty_sqrs = board.get_empty_sqrs()
+
+            for (row, col) in empty_sqrs:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, 1)
+                eval = self.minimax(temp_board, screen, False)[0]
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = (row, col)
+
+            return max_eval, best_move
+
+        elif not maximizing:
+            min_eval = 100
+            best_move = None
+            empty_sqrs = board.get_empty_sqrs()
+
+            for (row, col) in empty_sqrs:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, self.player)
+                eval = self.minimax(temp_board, screen, True)[0]
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = (row, col)
+
+            return min_eval, best_move
+
+    # --- MAIN EVAL ---
+    def eval(self, main_board, screen):
+        # minimax algo
+        eval, move = self.minimax(main_board, screen, False)
+
+        print(f'AI has chosen to mark the square in pos {move} with an eval of: {eval}')
+
+        return move # row, col
