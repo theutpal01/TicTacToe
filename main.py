@@ -1,8 +1,7 @@
-from ast import With
 from threading import Thread
-import pygame, copy, sys, math
-from bin.constants import *
-from bin.dependecies import *
+import pygame, sys, math
+# from bin.constants import *
+from bin.dependencies import *
 
 # --------------- PYGAME SETUP
 pygame.init()
@@ -292,7 +291,7 @@ def main():
                 # EVENTS FOR GAME AREA WINDOW
                 elif game.GAME_AREA and game.runing:
                     pos = event.pos
-                    if ((pos[0] >= PADX and pos[0] <= WIDTH) and (pos[1] >= 0 and pos[1] <= HEIGHT)):
+                    if ((pos[0] >= PADX and pos[0] <= WIDTH - MARGIN) and (pos[1] >= 0 and pos[1] <= HEIGHT - MARGIN)):
                         row = pos[1] // SQSIZE
                         col = (pos[0] - PADX) // SQSIZE
                         
@@ -349,19 +348,6 @@ def main():
 
                 elif event.key == pygame.K_SPACE and not game.runing and game.GAME_AREA:
                     game.reset()
-
-
-        # if game.GAME_AREA:
-        #     if game.player == 1: 
-        #         game.gameArea.pName.changeColor(screen, FOCUS_COLOR)
-        #         game.gameArea.oName.changeColor(screen, FG_COLOR)
-        #     else:
-        #         game.gameArea.pName.changeColor(screen, FG_COLOR)
-        #         game.gameArea.oName.changeColor(screen, FOCUS_COLOR)
-
-            # if game.isover() and game.runing:
-            #     game.runing = False
-            #     game.showEndText("PRESS ENTER KEY TO RESTART", OVER_COLOR)
 
         pygame.display.update()
 

@@ -1,4 +1,3 @@
-
 import pygame, copy, numpy as np
 from bin.constants import *
 
@@ -91,7 +90,6 @@ class NameScreen:
 
         self.oLabel = Label(oLbl, (WIDTH / 12, 300, 300, 50))
         if (oLbl == "Computer Name:"):
-            print("BOT PLAY")
             self.oNameField = TextBox((WIDTH / 2.5, 300, 400, 50), text=BOT_NAME)
         else:
             self.oNameField = TextBox((WIDTH / 2.5, 300, 400, 50))
@@ -205,6 +203,7 @@ class Board:
     def isempty(self):
         return self.marked_sqrs == 0
 
+
 class AI:
     def __init__(self, player=2):
         self.player = player
@@ -262,7 +261,9 @@ class AI:
     def eval(self, main_board, screen):
         # minimax algo
         eval, move = self.minimax(main_board, screen, False)
-
         print(f'AI has chosen to mark the square in pos {move} with an eval of: {eval}')
-
         return move # row, col
+
+
+class Music:
+    pass

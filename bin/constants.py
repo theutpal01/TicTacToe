@@ -7,6 +7,7 @@
 WIDTH = 800
 HEIGHT = 500
 PADX = WIDTH - HEIGHT
+MARGIN = 3
 GAME_TITLE = "Tic Tac Toe - Utpal"
 BOT_NAME = "Undefeatable"
 
