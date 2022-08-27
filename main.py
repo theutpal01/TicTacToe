@@ -53,8 +53,6 @@ class Game:
     # BOTTOM - THESE ARE ALL IN GAME FUNC WHEN PLYER PLAYS THE GAME
     def show_lines(self):
         # vertical
-        pygame.draw.line(screen, CROSS_COLOR, (PADX - 50, 0), (PADX - 50, HEIGHT), LINE_WIDTH)
-
         pygame.draw.line(screen, LINE_COLOR, (PADX + SQSIZE, 0), (PADX + SQSIZE, HEIGHT), LINE_WIDTH)
         pygame.draw.line(screen, LINE_COLOR, (WIDTH - SQSIZE, 0), (WIDTH - SQSIZE, HEIGHT), LINE_WIDTH)
 
