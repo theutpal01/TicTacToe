@@ -1,4 +1,5 @@
 from ast import With
+from threading import Thread
 import pygame, copy, sys, math
 from bin.constants import *
 from bin.dependecies import *
@@ -54,7 +55,7 @@ class Game:
     # BOTTOM - THESE ARE ALL IN GAME FUNC WHEN PLYER PLAYS THE GAME
     def show_lines(self):
         # vertical
-        pygame.draw.line(screen, LINE_COLOR, (PADX - 50, 0), (PADX - 50, HEIGHT), LINE_WIDTH)
+        pygame.draw.line(screen, CROSS_COLOR, (PADX - 50, 0), (PADX - 50, HEIGHT), LINE_WIDTH)
 
         pygame.draw.line(screen, LINE_COLOR, (PADX + SQSIZE, 0), (PADX + SQSIZE, HEIGHT), LINE_WIDTH)
         pygame.draw.line(screen, LINE_COLOR, (WIDTH - SQSIZE, 0), (WIDTH - SQSIZE, HEIGHT), LINE_WIDTH)
@@ -87,6 +88,14 @@ class Game:
         self.draw_fig(row, col)
         self.next_turn()
 
+    def ai_move(self):
+        row, col = self.ai.eval(self.board, screen)
+        self.make_move(row, col)
+        if self.isover() and self.runing:
+            self.runing = False
+            self.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
+        self.updateNameFocus()
+
     def next_turn(self):
         self.player = self.player % 2 + 1
 
@@ -98,6 +107,7 @@ class Game:
         self.player = 1
         self.runing = True
         self.updateGameArea()
+        self.updateNameFocus()
 
     def showEndText(self, text, color):
         baseFont = pygame.font.SysFont("Corbel", 45, True)
@@ -114,11 +124,9 @@ class Game:
         screen.fill(BG_COLOR)
         self.menu.drawAll(screen)
 
-
     def updateMode(self):
         screen.fill(BG_COLOR)
         self.mode.drawAll(screen)
-
 
     def updateNameBvP(self):
         screen.fill(BG_COLOR) 
@@ -126,18 +134,25 @@ class Game:
         self.nameBvP.oNameField.displayText(screen)
         self.nameBvP.pNameField.displayText(screen)
 
-
     def updateNamePvP(self):
         screen.fill(BG_COLOR)
         self.namePvP.drawAll(screen)
         self.namePvP.oNameField.displayText(screen)
         self.namePvP.pNameField.displayText(screen)
 
-
     def updateGameArea(self):
         screen.fill(BG_COLOR)
         self.gameArea.drawAll(screen)
         self.show_lines()
+
+    def updateNameFocus(self):
+        if self.player == 1: 
+            self.gameArea.pName.changeColor(screen, FOCUS_COLOR)
+            self.gameArea.oName.changeColor(screen, FG_COLOR)
+        else:
+            self.gameArea.pName.changeColor(screen, FG_COLOR)
+            self.gameArea.oName.changeColor(screen, FOCUS_COLOR)
+        pygame.display.update()
 
 
 def main():
@@ -154,10 +169,7 @@ def main():
 
             # EVENTS OTHER THAN QUIT BY CROSS BTN OR USING SHORTCUT
             if event.type == pygame.MOUSEBUTTONDOWN:
-
-                if not game.runing and game.GAME_AREA:
-                    game.reset()
-                    
+                 
                 # EVENTS FOR MENU WINDOW
                 if game.MENU:
                     if game.isCollideCircle(pygame.mouse.get_pos(), game.menu.playRect):
@@ -278,19 +290,12 @@ def main():
 
 
                 # EVENTS FOR GAME AREA WINDOW
-                elif game.GAME_AREA:
+                elif game.GAME_AREA and game.runing:
                     pos = event.pos
-                    if (pos[0] >= PADX):
+                    if ((pos[0] >= PADX and pos[0] <= WIDTH) and (pos[1] >= 0 and pos[1] <= HEIGHT)):
                         row = pos[1] // SQSIZE
                         col = (pos[0] - PADX) // SQSIZE
-
-                        if game.player == 1: 
-                            game.gameArea.pName.changeColor(screen, FOCUS_COLOR)
-                            game.gameArea.oName.changeColor(screen, FG_COLOR)
-                        else:
-                            game.gameArea.pName.changeColor(screen, FG_COLOR)
-                            game.gameArea.oName.changeColor(screen, FOCUS_COLOR)
-
+                        
                         if game.gameType == "normal":
                             if game.board.empty_sqr(row, col) and game.runing:
                                 game.make_move(row, col)
@@ -301,17 +306,15 @@ def main():
                                 game.make_move(row, col)
                                 pygame.display.update()
 
-                            if game.board.marked_sqrs != 9:
-                                row, col = game.ai.eval(game.board, screen)
-                                game.make_move(row, col)
-                                pygame.display.update()
+                                if game.board.marked_sqrs != 9:
+                                    Thread(target=game.ai_move).start()
+                                    
+                        game.updateNameFocus()
 
                         if game.isover() and game.runing:
                             game.runing = False
-                            game.showEndText("CLICK ANYWHERE TO RESTART", OVER_COLOR)
-
-
-
+                            game.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
+                            pygame.display.update()
 
             # KEYBOARD EVENTS FOR TYPING NAMES, ETC...
             if event.type == pygame.KEYDOWN:
@@ -342,7 +345,23 @@ def main():
                     elif game.namePvP.oNameField.active:
                         game.namePvP.oNameField.userText += event.unicode if len(game.namePvP.oNameField.userText) < 10 else ""
                         game.updateNamePvP()
-        
+
+
+                elif event.key == pygame.K_SPACE and not game.runing and game.GAME_AREA:
+                    game.reset()
+
+
+        # if game.GAME_AREA:
+        #     if game.player == 1: 
+        #         game.gameArea.pName.changeColor(screen, FOCUS_COLOR)
+        #         game.gameArea.oName.changeColor(screen, FG_COLOR)
+        #     else:
+        #         game.gameArea.pName.changeColor(screen, FG_COLOR)
+        #         game.gameArea.oName.changeColor(screen, FOCUS_COLOR)
+
+            # if game.isover() and game.runing:
+            #     game.runing = False
+            #     game.showEndText("PRESS ENTER KEY TO RESTART", OVER_COLOR)
 
         pygame.display.update()
 
