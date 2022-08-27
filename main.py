@@ -33,13 +33,6 @@ class Game:
         self.board = Board()
         self.ai = AI()
 
-    # def onClick(self, image, scale):
-    #     if not self.CLICKED:
-    #         size = image.get_size()
-    #         pygame.transform.smoothscale(image, (size[0] - scale, size[1] - scale))
-    #         pygame.display.update()
-    #         self.CLICKED = True
-    
     def isCollideCircle(self, mouse, rect):
         radius = rect.width // 2
         distX = mouse[0] - rect.centerx
@@ -91,8 +84,8 @@ class Game:
         row, col = self.ai.eval(self.board, screen)
         self.make_move(row, col)
         if self.isover() and self.runing:
-            self.runing = False
             self.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
+            self.runing = False
         self.updateNameFocus()
 
     def next_turn(self):
@@ -311,9 +304,9 @@ def main():
                         game.updateNameFocus()
 
                         if game.isover() and game.runing:
-                            game.runing = False
                             game.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
                             pygame.display.update()
+                            game.runing = False
 
             # KEYBOARD EVENTS FOR TYPING NAMES, ETC...
             if event.type == pygame.KEYDOWN:
