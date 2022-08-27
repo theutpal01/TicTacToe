@@ -1,0 +1,7 @@
+
+# Ignored files
+
+/output
+config.json
+
+/bin/__pycache__

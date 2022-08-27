@@ -1,7 +1,13 @@
 from threading import Thread
-import pygame, sys, math
+import pygame, sys, os, importlib, math
 # from bin.constants import *
 from bin.dependencies import *
+
+# CLOSING SPLASH SCREEN IF THERE IS ANY
+if '_PYIBoot_SPLASH' in os.environ and importlib.util.find_spec("pyi_splash"):
+    import pyi_splash
+    pyi_splash.update_text('UI Loaded ...')
+    pyi_splash.close()
 
 # --------------- PYGAME SETUP
 pygame.init()
@@ -342,6 +348,9 @@ def main():
                 elif event.key == pygame.K_SPACE and not game.runing and game.GAME_AREA:
                     game.reset()
 
+        if game.isover():
+            game.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
+            game.runing = False
         pygame.display.update()
 
 
