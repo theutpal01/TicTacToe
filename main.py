@@ -1,10 +1,11 @@
 from threading import Thread
-import pygame, sys, os, importlib, math
-# from bin.constants import *
+from os import environ
+from importlib import util
+import pygame, sys, math, time
 from bin.dependencies import *
 
 # CLOSING SPLASH SCREEN IF THERE IS ANY
-if '_PYIBoot_SPLASH' in os.environ and importlib.util.find_spec("pyi_splash"):
+if '_PYIBoot_SPLASH' in environ and util.find_spec("pyi_splash"):
     import pyi_splash
     pyi_splash.update_text('UI Loaded ...')
     pyi_splash.close()
@@ -28,8 +29,8 @@ class Game:
         self.player = 1
         self.gameType = ""
         self.runing = False
-
         self.CLICKED = False
+        self.EFFECTS = True
 
         self.menu = MenuScreen()
         self.mode = ModeScreen()
@@ -38,6 +39,14 @@ class Game:
         self.gameArea = GameArea()
         self.board = Board()
         self.ai = AI()
+
+        self.music = MusicManager("files/sounds/music.mp3")
+        self.clickSound = SoundManager("files/sounds/click.wav")
+        self.hoverSound = SoundManager("files/sounds/hover.wav")
+        self.placeSound = SoundManager("files/sounds/place.wav")
+        self.victorySound = SoundManager("files/sounds/victory.wav")
+        self.drawSound = SoundManager("files/sounds/draw.wav")
+        self.defeatSound = SoundManager("files/sounds/defeat.wav")
 
     def isCollideCircle(self, mouse, rect):
         radius = rect.width // 2
@@ -85,8 +94,12 @@ class Game:
         self.next_turn()
 
     def ai_move(self):
+        if self.board.marked_sqrs > 2:
+            time.sleep(1.5)
         row, col = self.ai.eval(self.board, screen)
         self.make_move(row, col)
+        self.placeSound.play(self.EFFECTS)
+
         if self.isover() and self.runing:
             self.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
             self.runing = False
@@ -96,6 +109,19 @@ class Game:
         self.player = self.player % 2 + 1
 
     def isover(self):
+        if self.gameType == "ai":
+            if self.board.final_state(screen) == 1:
+                self.victorySound.play(self.EFFECTS)
+            elif self.board.final_state(screen) == 2:
+                self.defeatSound.play(self.EFFECTS)
+            elif self.board.marked_sqrs == 9:
+                self.drawSound.play(self.EFFECTS)
+        elif self.gameType == "normal":
+            if self.board.final_state(screen) == 1 or self.board.final_state(screen) == 2:
+                self.victorySound.play(self.EFFECTS)
+            elif self.board.marked_sqrs == 9:
+                self.drawSound.play(self.EFFECTS)
+
         return self.board.final_state(screen, show=True) != 0 or self.board.isfull()
 
     def reset(self):
@@ -150,10 +176,10 @@ class Game:
             self.gameArea.oName.changeColor(screen, FOCUS_COLOR)
         pygame.display.update()
 
-
 def main():
 
     game = Game()
+    game.music.play()
     game.updateMenu()
 
     while True:
@@ -169,6 +195,7 @@ def main():
                 # EVENTS FOR MENU WINDOW
                 if game.MENU:
                     if game.isCollideCircle(pygame.mouse.get_pos(), game.menu.playRect):
+                        game.clickSound.play(game.EFFECTS)
                         game.CLICKED = True
                         game.MENU = False
                         game.MODE = True
@@ -177,14 +204,31 @@ def main():
                             
 
                     elif game.isCollideCircle(pygame.mouse.get_pos(), game.menu.musicRect):
-                        pass
+                        game.clickSound.play(game.EFFECTS)
+                        game.menu.chamgeImg("music")
+                        screen.fill(BG_COLOR)
+                        game.menu.drawAll(screen)
+
+                        if game.menu.music:
+                            game.music.unpause()
+                        elif not game.menu.music:
+                            game.music.pause()
 
 
                     elif game.isCollideCircle(pygame.mouse.get_pos(), game.menu.soundRect):
-                        pass
+                        game.clickSound.play(game.EFFECTS)
+                        game.menu.chamgeImg("sound")
+                        screen.fill(BG_COLOR)
+                        game.menu.drawAll(screen)
+
+                        if game.menu.sound:
+                            game.EFFECTS = True
+                        elif not game.menu.sound:
+                            game.EFFECTS = False
 
 
                     elif game.isCollideCircle(pygame.mouse.get_pos(), game.menu.exitRect):
+                        game.clickSound.play(game.EFFECTS)
                         pygame.quit()
                         sys.exit()
 
@@ -194,6 +238,7 @@ def main():
                 elif game.MODE:
 
                     if game.isCollideRect(pygame.mouse.get_pos(), game.mode.playBVPRect):
+                        game.clickSound.play(game.EFFECTS)
                         game.CLICKED = True
                         game.MODE = False
                         game.NAME_BVP = True
@@ -202,6 +247,7 @@ def main():
                             
 
                     elif game.isCollideRect(pygame.mouse.get_pos(), game.mode.playPVPRect):
+                        game.clickSound.play(game.EFFECTS)
                         game.CLICKED = True
                         game.MODE = False
                         game.NAME_PVP = True
@@ -210,6 +256,7 @@ def main():
                             
                     
                     elif game.isCollideCircle(pygame.mouse.get_pos(), game.mode.exitRect):
+                        game.clickSound.play(game.EFFECTS)
                         game.CLICKED = True
                         game.MODE = False
                         game.MENU = True
@@ -224,6 +271,8 @@ def main():
                         player = game.nameBvP.pNameField.userText
                         opponent = game.nameBvP.oNameField.userText
                         if player != "":
+                            game.clickSound.play(game.EFFECTS)
+                            game.music.pause()
                             game.gameArea.setPlayers(player, opponent, game.nameBvP.pNameField.inputRect, game.nameBvP.oNameField.inputRect)
                             game.CLICKED = True
                             game.NAME_BVP = False
@@ -235,6 +284,8 @@ def main():
 
 
                     elif game.isCollideCircle(pygame.mouse.get_pos(), game.nameBvP.exitRect):
+                        game.clickSound.play(game.EFFECTS)
+                        game.nameBvP.pNameField.userText = ""
                         game.CLICKED = True
                         game.NAME_BVP = False
                         game.MODE = True
@@ -243,6 +294,7 @@ def main():
 
 
                     if game.nameBvP.pNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
+                        game.hoverSound.play(game.EFFECTS)
                         game.nameBvP.pNameField.active = True
                     else:
                         game.nameBvP.pNameField.active = False
@@ -255,17 +307,22 @@ def main():
                         player = game.namePvP.pNameField.userText
                         opponent = game.namePvP.oNameField.userText
                         if player != "" and opponent != "":
+                            game.clickSound.play(game.EFFECTS)
+                            game.music.pause()
                             game.gameArea.setPlayers(player, opponent, game.namePvP.pNameField.inputRect, game.namePvP.oNameField.inputRect)
+                            game.gameType = "normal"
                             game.CLICKED = True
                             game.NAME_PVP = False
                             game.GAME_AREA = True
                             game.CLICKED = False
-                            game.gameType = "normal"
                             game.runing = True
                             game.updateGameArea()
 
 
                     elif game.isCollideCircle(pygame.mouse.get_pos(), game.namePvP.exitRect):
+                        game.clickSound.play(game.EFFECTS)
+                        game.namePvP.pNameField.userText = ""
+                        game.namePvP.oNameField.userText = ""
                         game.CLICKED = True
                         game.NAME_PVP = False
                         game.MODE = True
@@ -274,9 +331,11 @@ def main():
 
 
                     if game.namePvP.pNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
+                        game.hoverSound.play(game.EFFECTS)
                         game.namePvP.pNameField.active = True
                         game.namePvP.oNameField.active = False
                     elif game.namePvP.oNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
+                        game.hoverSound.play(game.EFFECTS)
                         game.namePvP.pNameField.active = False
                         game.namePvP.oNameField.active = True
                     else:
@@ -291,14 +350,16 @@ def main():
                     if ((pos[0] >= PADX and pos[0] <= WIDTH - MARGIN) and (pos[1] >= 0 and pos[1] <= HEIGHT - MARGIN)):
                         row = pos[1] // SQSIZE
                         col = (pos[0] - PADX) // SQSIZE
-                        
+
                         if game.gameType == "normal":
                             if game.board.empty_sqr(row, col) and game.runing:
+                                game.placeSound.play(game.EFFECTS)
                                 game.make_move(row, col)
                                 pygame.display.update()
 
                         elif game.gameType == "ai":
                             if game.board.empty_sqr(row, col) and game.player == 1 and game.runing:
+                                game.placeSound.play(game.EFFECTS and game.player == 1)
                                 game.make_move(row, col)
                                 pygame.display.update()
 
@@ -311,6 +372,8 @@ def main():
                             game.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
                             pygame.display.update()
                             game.runing = False
+
+
 
             # KEYBOARD EVENTS FOR TYPING NAMES, ETC...
             if event.type == pygame.KEYDOWN:
@@ -345,10 +408,7 @@ def main():
 
                 elif event.key == pygame.K_SPACE and not game.runing and game.GAME_AREA:
                     game.reset()
-
-        if game.isover():
-            game.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
-            game.runing = False
+    
         pygame.display.update()
 
 

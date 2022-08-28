@@ -41,9 +41,11 @@ class MenuScreen:
         self.playRect = self.playImg.get_rect(center=(WIDTH / 2, HEIGHT / 1.7))
 
         self.musicImg = pygame.image.load(MUSIC_ON).convert_alpha()
+        self.music = True
         self.musicRect = self.musicImg.get_rect(center=(40, HEIGHT - 40))
         
         self.soundImg = pygame.image.load(SOUND_ON).convert_alpha()
+        self.sound = True
         self.soundRect = self.soundImg.get_rect(center=(120, HEIGHT - 40))
 
         self.exitImg = pygame.image.load(EXIT).convert_alpha()
@@ -56,6 +58,25 @@ class MenuScreen:
         screen.blit(self.musicImg, self.musicRect)
         screen.blit(self.soundImg, self.soundRect)
         screen.blit(self.exitImg, self.exitRect)
+
+
+    def chamgeImg(self, type):
+        if type == "music":
+            if self.music:
+                self.musicImg = pygame.image.load(MUSIC_OFF).convert_alpha()
+                self.music = False
+            else:
+                self.musicImg = pygame.image.load(MUSIC_ON).convert_alpha()
+                self.music = True
+        elif type == "sound":
+            if self.sound:
+                self.soundImg = pygame.image.load(SOUND_OFF).convert_alpha()
+                self.sound = False
+            else:
+                self.soundImg = pygame.image.load(SOUND_ON).convert_alpha()
+                self.sound = True
+
+        
 
 
 class ModeScreen:
@@ -211,7 +232,6 @@ class AI:
 
     # --- MINIMAX ---
     def minimax(self, board, screen, maximizing):
-        
         # terminal case
         case = board.final_state(screen)
 
@@ -239,7 +259,6 @@ class AI:
                 if eval > max_eval:
                     max_eval = eval
                     best_move = (row, col)
-
             return max_eval, best_move
 
         elif not maximizing:
@@ -254,7 +273,6 @@ class AI:
                 if eval < min_eval:
                     min_eval = eval
                     best_move = (row, col)
-
             return min_eval, best_move
 
     # --- MAIN EVAL ---
@@ -265,5 +283,29 @@ class AI:
         return move # row, col
 
 
-class Music:
-    pass
+class MusicManager:
+    def __init__(self, file, loop: bool=True):
+        self.file = file
+        self.loop = -1 if loop == True else 0
+        pygame.mixer.music.load(self.file)
+
+    
+    def play(self):
+        pygame.mixer.music.play(self.loop)
+
+
+    def pause(self):
+        pygame.mixer.music.pause()
+
+    
+    def unpause(self):
+        pygame.mixer.music.unpause()
+
+class SoundManager:
+    def __init__(self, file):
+        self.file = file
+        self.sound = pygame.mixer.Sound(self.file)
+
+    
+    def play(self, condition):
+            if condition: self.sound.play()
