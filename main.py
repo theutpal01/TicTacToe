@@ -1,14 +1,17 @@
 from threading import Thread
 from os import environ
 from importlib import util
-import pygame, sys, math, time
+from time import sleep
+import pygame, sys, math
 from bin.dependencies import *
 
-# CLOSING SPLASH SCREEN IF THERE IS ANY
+
+# CLOSING SPLASH SCREEN IF THERE IS ANY [ONLY APPLICABLE FOR THE BUILD FILE OF THIS GAME]
 if '_PYIBoot_SPLASH' in environ and util.find_spec("pyi_splash"):
     import pyi_splash
     pyi_splash.update_text('UI Loaded ...')
     pyi_splash.close()
+
 
 # --------------- PYGAME SETUP
 pygame.init()
@@ -18,8 +21,54 @@ pygame.display.set_caption(GAME_TITLE)
 icon = pygame.image.load("files/icon.png").convert_alpha()
 pygame.display.set_icon(icon)
 
+clock = pygame.time.Clock()
+
 
 class Game:
+    """
+        User defined class for the management of whole game.
+        This class is a parent class of all other classes created in dependecies.py file
+
+        isCollideCircle() funtion return true if mouse collides with given circle and takes:
+            mouse: posiition of mouse pointer (x, y)
+            rect: positonal rectangle of the object
+
+        isCollideRect() funtion return true if mouse collides with given rectangle and takes:
+            mouse: posiition of mouse pointer (x, y)
+            rect: positonal rectangle of the object
+
+        showLines() funtion displays the lines of the game area window
+
+        drawFig() funtion draws the required game item (O or X) and takes:
+            row: row number of the box
+            col: col number of the box
+
+        makeMove() funtion draws the game element by passing arguments to drawFig() funtion and changing the turn of players and takes:
+            row: row number of the box
+            col: col number of the box
+
+        aiMove() funtion is for algo to make move just like previous one [makeMove()]
+
+        nextTurn() funtion changes the turn of the players accordingly
+
+        isover() funtion checks whether the game is over or not i.e:
+            game is won by player or ai
+            game ends in tie
+            it also plays the sound effect accordingly
+
+        reset() funtion resets the game area completelty except the players name and scores
+
+        showEndText() funtion displays the end message (request) to the player when game is over and takes:
+            text: text to display in a label at the center
+            color: color of the text to be displayed
+
+        updateMenu(), updateMode(), updateNameBvP(), updateNamePvP(), updateGameArea():
+            funtions that contains the funtions to draw components on the screen according to the windows in whicih the user is.
+
+        updateNameFocus(): funtion that updates the color according to the move of the players
+
+        updateScores(): funtion that updates the scores after each finished match
+    """
     def __init__(self):
         self.MENU = True
         self.MODE = False
@@ -31,6 +80,7 @@ class Game:
         self.runing = False
         self.CLICKED = False
         self.EFFECTS = True
+        # self.over = False
 
         self.menu = MenuScreen()
         self.mode = ModeScreen()
@@ -60,7 +110,7 @@ class Game:
         return rect.collidepoint(mouse[0], mouse[1])
 
     # BOTTOM - THESE ARE ALL IN GAME FUNC WHEN PLYER PLAYS THE GAME
-    def show_lines(self):
+    def showLines(self):
         # vertical
         pygame.draw.line(screen, LINE_COLOR, (PADX + SQSIZE, 0), (PADX + SQSIZE, HEIGHT), LINE_WIDTH)
         pygame.draw.line(screen, LINE_COLOR, (WIDTH - SQSIZE, 0), (WIDTH - SQSIZE, HEIGHT), LINE_WIDTH)
@@ -69,7 +119,7 @@ class Game:
         pygame.draw.line(screen, LINE_COLOR, (PADX, SQSIZE), (WIDTH, SQSIZE), LINE_WIDTH)
         pygame.draw.line(screen, LINE_COLOR, (PADX, HEIGHT - SQSIZE), (WIDTH, HEIGHT - SQSIZE), LINE_WIDTH)
 
-    def draw_fig(self, row, col):
+    def drawFig(self, row, col):
         if self.player == 1:
             # draw cross
             # desc line
@@ -87,20 +137,27 @@ class Game:
             pygame.draw.circle(screen, CIRC_COLOR, center, RADIUS, CIRC_WIDTH)
 
     # --- OTHER METHODS ---
-
-    def make_move(self, row, col):
-        self.board.mark_sqr(row, col, self.player)
-        self.draw_fig(row, col)
+    def makeMove(self, row, col):
+        self.board.markSqr(row, col, self.player)
+        self.drawFig(row, col)
         self.next_turn()
 
-    def ai_move(self):
+    def aiMove(self):
         if self.board.marked_sqrs > 2:
-            time.sleep(1.5)
+            sleep(1.5)
         row, col = self.ai.eval(self.board, screen)
-        self.make_move(row, col)
+        self.makeMove(row, col)
         self.placeSound.play(self.EFFECTS)
 
         if self.isover() and self.runing:
+            outcome = self.isover()
+            if outcome != -1:
+
+                # --------------- UPDATE SCORES
+                if outcome == 1: 
+                    self.updateScores(1, 0)
+                elif outcome == 2:
+                    self.updateScores(0, 1)
             self.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
             self.runing = False
         self.updateNameFocus()
@@ -109,25 +166,33 @@ class Game:
         self.player = self.player % 2 + 1
 
     def isover(self):
+        finalState = self.board.finalState(screen)
         if self.gameType == "ai":
-            if self.board.final_state(screen) == 1:
+            if finalState == 1:
                 self.victorySound.play(self.EFFECTS)
-            elif self.board.final_state(screen) == 2:
+            elif finalState == 2:
                 self.defeatSound.play(self.EFFECTS)
             elif self.board.marked_sqrs == 9:
                 self.drawSound.play(self.EFFECTS)
         elif self.gameType == "normal":
-            if self.board.final_state(screen) == 1 or self.board.final_state(screen) == 2:
+            if finalState == 1 or finalState == 2:
                 self.victorySound.play(self.EFFECTS)
             elif self.board.marked_sqrs == 9:
                 self.drawSound.play(self.EFFECTS)
 
-        return self.board.final_state(screen, show=True) != 0 or self.board.isfull()
+        self.board.finalState(screen, show=True)
+        if finalState == 1:
+            return 1
+        elif finalState == 2:
+            return 2
+        elif self.board.isfull():
+            return -1
 
     def reset(self):
         self.board = Board()
         self.player = 1
         self.runing = True
+        self.gameArea.setPlayers((self.gameArea.playerName, self.gameArea.playerScore), (self.gameArea.opponentName, self.gameArea.opponentScore), self.gameArea.playerRect, self.gameArea.opponentRect)
         self.updateGameArea()
         self.updateNameFocus()
 
@@ -165,7 +230,7 @@ class Game:
     def updateGameArea(self):
         screen.fill(BG_COLOR)
         self.gameArea.drawAll(screen)
-        self.show_lines()
+        self.showLines()
 
     def updateNameFocus(self):
         if self.player == 1: 
@@ -176,20 +241,25 @@ class Game:
             self.gameArea.oName.changeColor(screen, FOCUS_COLOR)
         pygame.display.update()
 
+    def updateScores(self, pScore, oScore):
+        self.gameArea.playerScore += pScore
+        self.gameArea.opponentScore += oScore
+
+
 def main():
 
-    game = Game()
-    game.music.play()
-    game.updateMenu()
+    game = Game()               # OBJECT OF THE GAME CLASS
+    game.music.play()           # STARTS PLAYING THE BG MSUIC
+    game.updateMenu()           # THIS FUNTIONS DRAWS THE COMONENT OF THE MENU WINDOW ON THE SCREEN
 
     while True:
-
         for event in pygame.event.get():
+            # IF PLAYER TRIES TO QUIT THE GAME USING RED CLOSE BTN OR SHORTCUT THEN GAME CLOSES
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-            # EVENTS OTHER THAN QUIT BY CROSS BTN OR USING SHORTCUT
+            # EVENTS OF THE GAME [MOUSE BUTTON CLICK EVENTS]
             if event.type == pygame.MOUSEBUTTONDOWN:
                  
                 # EVENTS FOR MENU WINDOW
@@ -233,7 +303,6 @@ def main():
                         sys.exit()
 
 
-
                 # EVENTS FOR MODE WINDOW
                 elif game.MODE:
 
@@ -263,17 +332,27 @@ def main():
                         game.CLICKED = False
                         game.updateMenu()
 
-
                 
                 # EVENTS FOR NAME_BVP WINDOW
                 elif game.NAME_BVP:
+                    if game.nameBvP.pNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
+                        game.hoverSound.play(game.EFFECTS)
+                        game.nameBvP.pNameField.active = True
+                        game.nameBvP.pNameField.cursor = "|"
+                        game.updateNameBvP()
+                    else:
+                        game.nameBvP.pNameField.active = False
+                        game.nameBvP.pNameField.cursor = ""
+                        game.updateNameBvP()
+
+
                     if game.isCollideRect(pygame.mouse.get_pos(), game.nameBvP.submitRect):
                         player = game.nameBvP.pNameField.userText
                         opponent = game.nameBvP.oNameField.userText
                         if player != "":
                             game.clickSound.play(game.EFFECTS)
                             game.music.pause()
-                            game.gameArea.setPlayers(player, opponent, game.nameBvP.pNameField.inputRect, game.nameBvP.oNameField.inputRect)
+                            game.gameArea.setPlayers((player, 0), (opponent, 0) , game.nameBvP.pNameField.inputRect, game.nameBvP.oNameField.inputRect)
                             game.CLICKED = True
                             game.NAME_BVP = False
                             game.GAME_AREA = True
@@ -293,23 +372,37 @@ def main():
                         game.updateMode()
 
 
-                    if game.nameBvP.pNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
-                        game.hoverSound.play(game.EFFECTS)
-                        game.nameBvP.pNameField.active = True
-                    else:
-                        game.nameBvP.pNameField.active = False
-
-
-
                 # EVENTS FOR NAME_PVP WINDOW
                 elif game.NAME_PVP:
+                    if game.namePvP.pNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
+                        game.hoverSound.play(game.EFFECTS)
+                        game.namePvP.oNameField.cursor = ""
+                        game.namePvP.oNameField.active = False
+                        game.namePvP.pNameField.cursor = "|"
+                        game.namePvP.pNameField.active = True
+                        game.updateNamePvP()
+                    elif game.namePvP.oNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
+                        game.hoverSound.play(game.EFFECTS)
+                        game.namePvP.pNameField.cursor = ""
+                        game.namePvP.pNameField.active = False
+                        game.namePvP.oNameField.cursor = "|"
+                        game.namePvP.oNameField.active = True
+                        game.updateNamePvP()
+                    else:
+                        game.namePvP.pNameField.cursor = ""
+                        game.namePvP.oNameField.cursor = ""
+                        game.namePvP.pNameField.active = False
+                        game.namePvP.oNameField.active = False
+                        game.updateNamePvP()
+
+
                     if game.isCollideRect(pygame.mouse.get_pos(), game.namePvP.submitRect):
                         player = game.namePvP.pNameField.userText
                         opponent = game.namePvP.oNameField.userText
                         if player != "" and opponent != "":
                             game.clickSound.play(game.EFFECTS)
                             game.music.pause()
-                            game.gameArea.setPlayers(player, opponent, game.namePvP.pNameField.inputRect, game.namePvP.oNameField.inputRect)
+                            game.gameArea.setPlayers((player, 0), (opponent, 0), game.namePvP.pNameField.inputRect, game.namePvP.oNameField.inputRect)
                             game.gameType = "normal"
                             game.CLICKED = True
                             game.NAME_PVP = False
@@ -330,20 +423,6 @@ def main():
                         game.updateMode()
 
 
-                    if game.namePvP.pNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
-                        game.hoverSound.play(game.EFFECTS)
-                        game.namePvP.pNameField.active = True
-                        game.namePvP.oNameField.active = False
-                    elif game.namePvP.oNameField.inputRect.collidepoint(pygame.mouse.get_pos()):
-                        game.hoverSound.play(game.EFFECTS)
-                        game.namePvP.pNameField.active = False
-                        game.namePvP.oNameField.active = True
-                    else:
-                        game.namePvP.pNameField.active = False
-                        game.namePvP.oNameField.active = False
-
-
-
                 # EVENTS FOR GAME AREA WINDOW
                 elif game.GAME_AREA and game.runing:
                     pos = event.pos
@@ -354,25 +433,40 @@ def main():
                         if game.gameType == "normal":
                             if game.board.empty_sqr(row, col) and game.runing:
                                 game.placeSound.play(game.EFFECTS)
-                                game.make_move(row, col)
+                                game.makeMove(row, col)
                                 pygame.display.update()
 
                         elif game.gameType == "ai":
-                            if game.board.empty_sqr(row, col) and game.player == 1 and game.runing:
+                            if game.board.emptySqr(row, col) and game.player == 1 and game.runing:
                                 game.placeSound.play(game.EFFECTS and game.player == 1)
-                                game.make_move(row, col)
+                                game.makeMove(row, col)
                                 pygame.display.update()
 
                                 if game.board.marked_sqrs != 9:
-                                    Thread(target=game.ai_move).start()
+                                    Thread(target=game.aiMove).start()
                                     
                         game.updateNameFocus()
 
                         if game.isover() and game.runing:
+                            outcome = game.isover()
+
+                            # --------------- UPDATE SCORES
+                            if outcome == 1: 
+                                game.updateScores(1, 0)
+                            elif outcome == 2:
+                                game.updateScores(0, 1)
+
+
+                            # if game.gameArea.playerScore == 5 or game.gameArea.opponentScore == 5:
+                            #     game.showEndText("GAMEOVER - ECS TO GO BACK", OVER_COLOR)
+                            #     pygame.display.update()
+                            #     # game.over = True
+                            #     game.runing = False
+
+                        
                             game.showEndText("PRESS SPACEBAR TO RESTART", OVER_COLOR)
                             pygame.display.update()
                             game.runing = False
-
 
 
             # KEYBOARD EVENTS FOR TYPING NAMES, ETC...
@@ -408,9 +502,16 @@ def main():
 
                 elif event.key == pygame.K_SPACE and not game.runing and game.GAME_AREA:
                     game.reset()
-    
-        pygame.display.update()
+
+                # elif event.key == pygame.K_ESCAPE and not game.runing and game.over and game.GAME_AREA:
+                #     game.reset()
+                #     game.GAME_AREA = False
+                #     game.MENU = True
+        
+
+        pygame.display.update()         # UPDATES THE GAME
+        clock.tick(FPS)                 # THIS WILL MAINTAIN THE FRAME RATE OF 60FPS
 
 
 if __name__ == '__main__':
-    main()
+    main()          # ENTRY POINT OF THE GAME

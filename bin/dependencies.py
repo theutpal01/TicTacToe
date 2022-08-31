@@ -1,8 +1,25 @@
+from time import sleep
 import pygame, copy, numpy as np
 from bin.constants import *
 
 
 class Label:
+    """
+        User defined class for the implementation of label in pygame module.
+
+        __init__() funtion takes:
+            text: Text of the label which is to be displayed.
+            rect: Position of the text to be diplayed.
+            color: Takes the color with which the text will be filled [optional].
+
+        display() function displays the label when called and takes:
+            screen: screen object for drawing the label on the window.
+
+        changeColor() funtion changes the color of label's text and takes:
+            screen: screen object for drawing the label on the window.
+            color: The color with which the label's text will be filled.
+    """
+
     def __init__(self, text, rect, color=FG_COLOR):
         self.text = text
         self.baseFont = pygame.font.SysFont("Cambria", 32)
@@ -20,19 +37,43 @@ class Label:
         screen.blit(text, (self.rect.x + 5, self.rect.y + 5))
 
 class TextBox:
+    """
+        User defined class for the implementation of textbox in pygame module.
+
+        __init__() funtion takes:
+            rect: Position of the textbox which is to be diplayed.
+            text: If given then textbox default text will be the given value [optional].
+
+        displayText() function displays the textbox when called and takes:
+            screen: screen object for drawing the textbox on the window.
+    """
     def __init__(self, rect, text=""):
         self.baseFont = pygame.font.SysFont("Cambria", 32)
         self.inputRect = pygame.Rect(rect[0], rect[1], rect[2], rect[3])
+        self.cursor = ""
         self.userText = text
         self.active = False
 
-    
     def displayText(self, screen):
-        text = self.baseFont.render(self.userText, True, FG_COLOR)
+        text = self.baseFont.render(self.userText + self.cursor, True, FG_COLOR)
         screen.blit(text, (self.inputRect.x + 5, self.inputRect.y + 5))
 
 
+
 class MenuScreen:
+    """
+        User defined class for the implementation of Menu Window.
+        In this window player can see a game screen in which he/she can:
+            click play btn and proceed
+            manage music and sound(on/off)
+            click exit btn and quit the game
+
+        drawAll() function displays the window and it's components which are initalized already when called and takes:
+            screen: screen object for drawing all the components on the window.
+
+        changeImg() function changes the image of music and sound btn accordingly and takes:
+            type: The type of button [only 2 strings applicable, (music, sound)]
+    """
     def __init__(self):
         self.headingImg = pygame.image.load(HEADING).convert_alpha()
         self.headingRect = self.headingImg.get_rect(center=(WIDTH / 2, HEIGHT / 3.3))
@@ -80,6 +121,15 @@ class MenuScreen:
 
 
 class ModeScreen:
+    """
+        User defined class for the implementation of Mode Window.
+        In this window a player gets to choose between two modes:
+            Player vs COmputer
+            Player vs Player
+
+        drawAll() function displays the window and it's components which are initalized already when called and takes:
+            screen: screen object for drawing all the components on the window.
+    """
     def __init__(self):
         self.headingImg = pygame.image.load(HEADING).convert_alpha()
         self.headingRect = self.headingImg.get_rect(center=(WIDTH / 2, 80))
@@ -101,6 +151,17 @@ class ModeScreen:
 
 
 class NameScreen:
+    """
+        User defined class for the implementation of Asking Name Window.
+        In this window([PLAYER vs COMPUTER] or [PLAYER vs PLAYER]) a player gets to enter his/her name
+
+        __init__() funtions takes:
+            pLbl: The text which is to be displayed for asking player's name
+            pLbl: The text which is to be displayed dipicting the value -> Computer's name or -> asking Opponent's Name.
+
+        drawAll() function displays the window and it's components which are initalized already when called and takes:
+            screen: screen object for drawing all the components on the window.
+    """
     def __init__(self, pLbl, oLbl):
 
         self.headingImg = pygame.image.load(HEADING).convert_alpha()
@@ -136,12 +197,31 @@ class NameScreen:
         
 
 class GameArea:
+    """
+        User defined class for the implementation of Game Area Window.
+        In this window a player(s) play the game
+
+        setPlayers() funtion sets the names of the players with their scores aside their names and takes:
+            player: iterable object with 2 items -> it's name, it's score
+            opponent: iterable object with 2 items -> it's name, it's score
+            playerRect: position of player
+            opponentRect: position of opponent
+
+        drawAll() function displays the window and it's components which are initalized already when called and takes:
+            screen: screen object for drawing all the components on the window.
+    """
     def __init__(self):
-        pass
+        self.playerName, self.opponentName = None, None
+        self.playerScore, self.opponentScore = None, None
+        self.playerRect, self.opponentRect = None, None
 
     def setPlayers(self, player, opponent, playerRect, opponentRect):
-        self.pName = Label(player.capitalize(), (1, 1, playerRect.width, playerRect.height), FOCUS_COLOR)
-        self.oName = Label(opponent.capitalize(), (1, HEIGHT - opponentRect.height + 3, opponentRect.width, opponentRect.height))
+        self.playerName, self.opponentName = player[0], opponent[0]
+        self.playerScore, self.opponentScore = player[1], opponent[1]
+        
+        self.playerRect, self.opponentRect = playerRect, opponentRect
+        self.pName = Label(f"{self.playerName.capitalize()} - {self.playerScore}", (1, 1, self.playerRect.width, self.playerRect.height), FOCUS_COLOR)
+        self.oName = Label(f"{self.opponentName.capitalize()} - {self.opponentScore}", (1, HEIGHT - self.opponentRect.height + 3, self.opponentRect.width, opponentRect.height))
 
     def drawAll(self, screen):
         self.pName.display(screen)
@@ -149,18 +229,39 @@ class GameArea:
 
 
 class Board:
+    """
+        User defined class for the implementation of Board [backend = not displayed to player].
+        This class is the manager of backend board in which player(s) will be playing.
+
+        finalState() function return the output accordingly:
+            @return 0 if there is no win yet
+            @return 1 if player 1 wins
+            @return 2 if player 2 wins
+        and takes input:
+            screen: screen object for drawing all the components on the window.
+            show: boolean & if passed true then the funtion will create a line to the area where a player won (just like in the actual game)
+
+        markSqr() funtion alters the position of item from 0 to 1 and hence marking it (O or X) and takes:
+            row: row number from the game
+            col: column number from the game
+
+        emptySqr() funtion checks whether given position is a empty box or not and takes:
+            row: row number from the game
+            col: column number from the game
+
+        getEmptySqrs() funtion returns a list of all the empty squares in the format of each item (row, col)
+
+        isfull() funtion chercks whether all the boxes are filled or not
+
+        isempty() funtion checks wheter all the boxes are empty or not
+    """
+
     def __init__(self):
         self.squares = np.zeros( (ROWS, COLS) )
         self.empty_sqrs = self.squares # [squares]
         self.marked_sqrs = 0
 
-    def final_state(self, screen, show=False):
-        '''
-            @return 0 if there is no win yet
-            @return 1 if player 1 wins
-            @return 2 if player 2 wins
-        '''
-
+    def finalState(self, screen, show=False):
         # vertical wins
         for col in range(COLS):
             if self.squares[0][col] == self.squares[1][col] == self.squares[2][col] != 0:
@@ -202,21 +303,21 @@ class Board:
         # no win yet
         return 0
 
-    def mark_sqr(self, row, col, player):
+    def markSqr(self, row, col, player):
         self.squares[row][col] = player
         self.marked_sqrs += 1
 
-    def empty_sqr(self, row, col):
+    def emptySqr(self, row, col):
         return self.squares[row][col] == 0
 
-    def get_empty_sqrs(self):
-        empty_sqrs = []
+    def getEmptySqrs(self):
+        emptySqrs = []
         for row in range(ROWS):
             for col in range(COLS):
-                if self.empty_sqr(row, col):
-                    empty_sqrs.append( (row, col) )
+                if self.emptySqr(row, col):
+                    emptySqrs.append( (row, col) )
         
-        return empty_sqrs
+        return emptySqrs
 
     def isfull(self):
         return self.marked_sqrs == 9
@@ -226,14 +327,29 @@ class Board:
 
 
 class AI:
-    def __init__(self, player=2):
-        self.player = player
+    """
+        User defined class for the implementation of AI [backend = not displayed to player].
+        This class uses Minimax algo to always win from the player or end the match in tie of them.
+
+        minimax() funtion uses minimax algo:
+            it alaysis the whole game by making a copy of board object and chooses the best possible move to prevent player from maximizing(wining)
+            and it takes:
+                board: a board object which is defined above [for analyzing the game]
+                screen: screen object for drawing all the components on the window.
+                maximizing: boolean value [for starting the algorithm]
+
+        eval() funtion is a trigger point of the minimax algo and takes:
+            mainBoard: a board object which is defined above [for analyzing the game in minimax algo]
+            screen: screen object for drawing all the components on the window.
+    """
+    def __init__(self):
+        self.player = 2
 
 
     # --- MINIMAX ---
     def minimax(self, board, screen, maximizing):
         # terminal case
-        case = board.final_state(screen)
+        case = board.finalState(screen)
 
         # player 1 wins
         if case == 1:
@@ -250,11 +366,11 @@ class AI:
         if maximizing:
             max_eval = -100
             best_move = None
-            empty_sqrs = board.get_empty_sqrs()
+            empty_sqrs = board.getEmptySqrs()
 
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 1)
+                temp_board.markSqr(row, col, 1)
                 eval = self.minimax(temp_board, screen, False)[0]
                 if eval > max_eval:
                     max_eval = eval
@@ -264,11 +380,11 @@ class AI:
         elif not maximizing:
             min_eval = 100
             best_move = None
-            empty_sqrs = board.get_empty_sqrs()
+            empty_sqrs = board.getEmptySqrs()
 
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, self.player)
+                temp_board.markSqr(row, col, self.player)
                 eval = self.minimax(temp_board, screen, True)[0]
                 if eval < min_eval:
                     min_eval = eval
@@ -276,14 +392,25 @@ class AI:
             return min_eval, best_move
 
     # --- MAIN EVAL ---
-    def eval(self, main_board, screen):
+    def eval(self, mainBoard, screen):
         # minimax algo
-        eval, move = self.minimax(main_board, screen, False)
+        eval, move = self.minimax(mainBoard, screen, False)
         print(f'AI has chosen to mark the square in pos {move} with an eval of: {eval}')
         return move # row, col
 
 
 class MusicManager:
+    """
+        User defined class for managing the music in the game.
+
+        __init__() funtion takes:
+            file: path of the music
+            loop: whether to play music in loop[true] or not[false] [default = true]
+
+        play() funtion starts playing the music [on loop or not]
+        pause() funtion pauses the music
+        unpause() funtion unpauses the music
+    """
     def __init__(self, file, loop: bool=True):
         self.file = file
         self.loop = -1 if loop == True else 0
@@ -302,6 +429,14 @@ class MusicManager:
         pygame.mixer.music.unpause()
 
 class SoundManager:
+    """
+        User defined class for managing the sounds in the game.
+
+        __init__() funtion takes:
+            file: path of the sound effect
+
+        play() funtion starts playing the sound effect
+    """
     def __init__(self, file):
         self.file = file
         self.sound = pygame.mixer.Sound(self.file)
