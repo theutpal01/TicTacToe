@@ -431,7 +431,7 @@ def main():
                         col = (pos[0] - PADX) // SQSIZE
 
                         if game.gameType == "normal":
-                            if game.board.empty_sqr(row, col) and game.runing:
+                            if game.board.emptySqr(row, col) and game.runing:
                                 game.placeSound.play(game.EFFECTS)
                                 game.makeMove(row, col)
                                 pygame.display.update()
